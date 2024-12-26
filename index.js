@@ -57,17 +57,26 @@ app.post('/api/persons', (req, res) => {
     return
   }
 
-  const person = req.body
-  if (person.name === undefined || person.number === undefined) {
+  const newPerson = req.body
+  if (newPerson.name === undefined || newPerson.number === undefined) {
     res.status(400).send({
-      message: `Expected json to contain entries of {name: ..., number: ...}`
+      error: 'Unexpected json format',
+      message: `json must contain entries {name: ..., number: ...}`
     })
     return
   }
 
-  persons = persons.concat({...person, id})
+  const isDuplicate = persons.some(person => person.name === newPerson.name)
+  if(isDuplicate) {
+    res.status(400).send({
+      error: "Name must be unique"
+    })
+    return 
+  }
 
-  res.json({...person, id})
+  persons = persons.concat({...newPerson, id})
+
+  res.json({...newPerson, id})
 })
 
 app.delete('/api/persons/:id', (req, res) => {
