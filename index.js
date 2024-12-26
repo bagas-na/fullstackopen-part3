@@ -1,4 +1,5 @@
 const express = require('express')
+const morgan = require('morgan')
 const app = express()
 
 let persons = [
@@ -24,7 +25,19 @@ let persons = [
   }
 ]
 
+morgan.token('tiny-post-body', function (tokens, req, res) {
+  return [
+    tokens.method(req, res),
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, 'content-length'), '-',
+    tokens['response-time'](req, res), 'ms',
+    req.method === 'POST' ? JSON.stringify(req.body) : '',
+  ].join(' ')
+})
+
 app.use(express.json())
+app.use(morgan('tiny-post-body'))
 
 app.get('/', (request, response) => {
   response.send('<h1>Hello World!</h1>')
@@ -67,16 +80,16 @@ app.post('/api/persons', (req, res) => {
   }
 
   const isDuplicate = persons.some(person => person.name === newPerson.name)
-  if(isDuplicate) {
+  if (isDuplicate) {
     res.status(400).send({
       error: "Name must be unique"
     })
-    return 
+    return
   }
 
-  persons = persons.concat({...newPerson, id})
+  persons = persons.concat({ ...newPerson, id })
 
-  res.json({...newPerson, id})
+  res.json({ ...newPerson, id })
 })
 
 app.delete('/api/persons/:id', (req, res) => {
