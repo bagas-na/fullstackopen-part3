@@ -28,15 +28,12 @@ let persons = [
 
 
 // Configuration for CORS
-const whitelist = ['http://localhost:5173']
+const whitelist = ['*']
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1) {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
-  }
+  origin: "*",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }
 
 
@@ -52,14 +49,10 @@ morgan.token('tiny-post-body', function (tokens, req, res) {
   ].join(' ')
 })
 
-
+app.use(express.static('dist'))
 app.use(express.json())
 app.use(morgan('tiny-post-body'))
 app.options('*', cors(corsOptions))
-
-app.get('/', (request, response) => {
-  response.send('<h1>Hello World!</h1>')
-})
 
 app.get('/api/persons', cors(corsOptions), (request, response) => {
   response.json(persons)
@@ -77,7 +70,7 @@ app.get('/api/persons/:id', cors(corsOptions), (req, res) => {
 })
 
 app.post('/api/persons', cors(corsOptions), (req, res) => {
-  const id = Math.floor(1000000 * Math.random());
+  const id = String(Math.floor(1000000 * Math.random()));
   const contentType = req.get('Content-type')
 
   if (contentType !== 'application/json') {
@@ -128,8 +121,7 @@ app.get('/info', (req, res) => {
   res.send(message)
 })
 
-
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
