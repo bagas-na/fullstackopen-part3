@@ -1,5 +1,6 @@
 const express = require('express')
 const morgan = require('morgan')
+const cors = require('cors')
 const app = express()
 
 let persons = [
@@ -25,6 +26,21 @@ let persons = [
   }
 ]
 
+
+// Configuration for CORS
+const whitelist = ['http://localhost:5173']
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  }
+}
+
+
+// Configuration for Logs
 morgan.token('tiny-post-body', function (tokens, req, res) {
   return [
     tokens.method(req, res),
@@ -36,18 +52,20 @@ morgan.token('tiny-post-body', function (tokens, req, res) {
   ].join(' ')
 })
 
+
 app.use(express.json())
 app.use(morgan('tiny-post-body'))
+app.options('*', cors(corsOptions))
 
 app.get('/', (request, response) => {
   response.send('<h1>Hello World!</h1>')
 })
 
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', cors(corsOptions), (request, response) => {
   response.json(persons)
 })
 
-app.get('/api/persons/:id', (req, res) => {
+app.get('/api/persons/:id', cors(corsOptions), (req, res) => {
   const id = req.params.id
   const matchedPerson = persons.find(person => person.id === id)
 
@@ -58,7 +76,7 @@ app.get('/api/persons/:id', (req, res) => {
   res.json(matchedPerson);
 })
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', cors(corsOptions), (req, res) => {
   const id = Math.floor(1000000 * Math.random());
   const contentType = req.get('Content-type')
 
@@ -92,7 +110,7 @@ app.post('/api/persons', (req, res) => {
   res.json({ ...newPerson, id })
 })
 
-app.delete('/api/persons/:id', (req, res) => {
+app.delete('/api/persons/:id', cors(corsOptions), (req, res) => {
   const id = req.params.id
   const matchedPerson = persons.find(person => person.id === id)
   if (!matchedPerson) {
