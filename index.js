@@ -6,10 +6,9 @@ const app = express()
 const Person = require('./model/person')
 
 // Configuration for CORS
-const whitelist = ['*']
 const corsOptions = {
-  origin: "*",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  origin: '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: false,
   optionsSuccessStatus: 204
 }
@@ -33,8 +32,8 @@ app.options('*', cors(corsOptions))
 
 app.get('/api/persons', cors(corsOptions), async (req, res, next) => {
   try {
-    const persons = await Person.find({});
-    res.json(persons);
+    const persons = await Person.find({})
+    res.json(persons)
   } catch (error) {
     console.log('error fetching persons from database:')
     next(error)
@@ -43,11 +42,11 @@ app.get('/api/persons', cors(corsOptions), async (req, res, next) => {
 
 app.get('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
   try {
-    const matchedPerson = await Person.findById(req.params.id);
+    const matchedPerson = await Person.findById(req.params.id)
     if (!matchedPerson) {
-      res.status(404).send({ error: `person with id:${id} is not found` })
+      res.status(404).send({ error: `person with id:${req.params.id} is not found` })
     }
-    res.json(matchedPerson);
+    res.json(matchedPerson)
   } catch (error) {
     console.log('error fetching person from database:')
     next(error)
@@ -69,7 +68,7 @@ app.post('/api/persons', cors(corsOptions), async (req, res, next) => {
   if (newPerson?.name === undefined || newPerson?.number === undefined) {
     res.status(400).send({
       error: 'Unexpected json format',
-      message: `json must contain entries {name: ..., number: ...}`
+      message: 'json must contain entries {name: ..., number: ...}'
     })
     return
   }
@@ -92,7 +91,7 @@ app.post('/api/persons', cors(corsOptions), async (req, res, next) => {
 app.delete('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
   try {
     const result = await Person.findByIdAndDelete(req.params.id)
-    res.json(result);
+    res.json(result)
   } catch (error) {
     console.log('error deleting person')
     next(error)
@@ -114,7 +113,7 @@ app.put('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
   if (newPerson?.name === undefined || newPerson?.number === undefined) {
     res.status(400).send({
       error: 'Unexpected json format',
-      message: `json must contain entries {name: ..., number: ...}`
+      message: 'json must contain entries {name: ..., number: ...}'
     })
     return
   }
@@ -126,7 +125,7 @@ app.put('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
 
   try {
     const result = await Person.findByIdAndUpdate(req.params.id, person, { new: true, runValidators: true, context: 'query' })
-    res.json(result);
+    res.json(result)
   } catch (error) {
     console.log('error updating person to database')
     next(error)
@@ -135,8 +134,8 @@ app.put('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
 
 app.get('/info', async (req, res, next) => {
   try {
-    const persons = await Person.find({});
-    let message = `<p>Phonebook has info for ${persons.length} ${persons.length === 1 ? 'person' : 'people'}</p>\n`;
+    const persons = await Person.find({})
+    let message = `<p>Phonebook has info for ${persons.length} ${persons.length === 1 ? 'person' : 'people'}</p>\n`
     message += `<p>${Date(Date.now()).toString()}</p>`
     res.send(message)
   } catch (error) {
