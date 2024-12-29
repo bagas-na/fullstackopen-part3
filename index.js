@@ -80,7 +80,7 @@ app.post('/api/persons', cors(corsOptions), async (req, res, next) => {
   })
 
   try {
-    const savedPerson = await person.save()
+    const savedPerson = await person.save({ validateBeforeSave: true })
     res.json(savedPerson)
   } catch (error) {
     console.log('error saving person to database:')
@@ -125,7 +125,7 @@ app.put('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
   }
 
   try {
-    const result = await Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    const result = await Person.findByIdAndUpdate(req.params.id, person, { new: true, runValidators: true, context: 'query' })
     res.json(result);
   } catch (error) {
     console.log('error updating person to database')
@@ -152,10 +152,12 @@ app.use((request, response) => {
 
 // Error handler
 app.use((error, req, res, next) => {
-  console.error(error.message)
+  console.error(error.name)
 
-  if (error.name = 'CastError') {
+  if (error.name === 'CastError') {
     return res.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return res.status(400).json({ error: error.message })
   }
 
   next(error)
