@@ -1,31 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
-
-let persons = [
-  {
-    "id": "1",
-    "name": "Arto Hellas",
-    "number": "040-123456"
-  },
-  {
-    "id": "2",
-    "name": "Ada Lovelace",
-    "number": "39-44-5323523"
-  },
-  {
-    "id": "3",
-    "name": "Dan Abramov",
-    "number": "12-43-234345"
-  },
-  {
-    "id": "4",
-    "name": "Mary Poppendieck",
-    "number": "39-23-6423122"
-  }
-]
-
+const Person = require('./model/person')
 
 // Configuration for CORS
 const whitelist = ['*']
@@ -35,7 +13,6 @@ const corsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204
 }
-
 
 // Configuration for Logs
 morgan.token('tiny-post-body', function (tokens, req, res) {
@@ -54,22 +31,29 @@ app.use(express.json())
 app.use(morgan('tiny-post-body'))
 app.options('*', cors(corsOptions))
 
-app.get('/api/persons', cors(corsOptions), (request, response) => {
-  response.json(persons)
-})
-
-app.get('/api/persons/:id', cors(corsOptions), (req, res) => {
-  const id = req.params.id
-  const matchedPerson = persons.find(person => person.id === id)
-
-  if (!matchedPerson) {
-    res.status(404).send({ error: `person with id:${id} is not found` })
+app.get('/api/persons', cors(corsOptions), async (req, res) => {
+  try {
+    const persons = await Person.find({});
+    res.json(persons);
+  } catch (error) {
+    console.log('error fetching persons from database:', error.message)
   }
-
-  res.json(matchedPerson);
 })
 
-app.post('/api/persons', cors(corsOptions), (req, res) => {
+app.get('/api/persons/:id', cors(corsOptions), async (req, res) => {
+  try {
+    const matchedPerson = await Person.findById(req.params.id);
+    if (!matchedPerson) {
+      res.status(404).send({ error: `person with id:${id} is not found` })
+    }
+    res.json(matchedPerson);
+  } catch (error) {
+    console.log('error fetching persons from database:', error.message)
+    res.status(500).end();
+  }
+})
+
+app.post('/api/persons', cors(corsOptions), async (req, res) => {
   const id = String(Math.floor(1000000 * Math.random()));
   const contentType = req.get('Content-type')
 
@@ -82,7 +66,7 @@ app.post('/api/persons', cors(corsOptions), (req, res) => {
   }
 
   const newPerson = req.body
-  if (newPerson.name === undefined || newPerson.number === undefined) {
+  if (newPerson?.name === undefined || newPerson?.number === undefined) {
     res.status(400).send({
       error: 'Unexpected json format',
       message: `json must contain entries {name: ..., number: ...}`
@@ -90,17 +74,18 @@ app.post('/api/persons', cors(corsOptions), (req, res) => {
     return
   }
 
-  const isDuplicate = persons.some(person => person.name === newPerson.name)
-  if (isDuplicate) {
-    res.status(400).send({
-      error: "Name must be unique"
-    })
-    return
+  const person = new Person({
+    name: newPerson.name,
+    number: newPerson.number
+  })
+
+  try {
+    const savedPerson = await person.save()
+    res.json(savedPerson)
+  } catch (error) {
+    console.log('error saving person to database:', error.message)
   }
 
-  persons = persons.concat({ ...newPerson, id })
-
-  res.json({ ...newPerson, id })
 })
 
 app.delete('/api/persons/:id', cors(corsOptions), (req, res) => {
