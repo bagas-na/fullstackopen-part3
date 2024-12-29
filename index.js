@@ -31,16 +31,17 @@ app.use(express.json())
 app.use(morgan('tiny-post-body'))
 app.options('*', cors(corsOptions))
 
-app.get('/api/persons', cors(corsOptions), async (req, res) => {
+app.get('/api/persons', cors(corsOptions), async (req, res, next) => {
   try {
     const persons = await Person.find({});
     res.json(persons);
   } catch (error) {
-    console.log('error fetching persons from database:', error.message)
+    console.log('error fetching persons from database:')
+    next(error)
   }
 })
 
-app.get('/api/persons/:id', cors(corsOptions), async (req, res) => {
+app.get('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
   try {
     const matchedPerson = await Person.findById(req.params.id);
     if (!matchedPerson) {
@@ -48,13 +49,12 @@ app.get('/api/persons/:id', cors(corsOptions), async (req, res) => {
     }
     res.json(matchedPerson);
   } catch (error) {
-    console.log('error fetching persons from database:', error.message)
-    res.status(500).end();
+    console.log('error fetching person from database:')
+    next(error)
   }
 })
 
-app.post('/api/persons', cors(corsOptions), async (req, res) => {
-  const id = String(Math.floor(1000000 * Math.random()));
+app.post('/api/persons', cors(corsOptions), async (req, res, next) => {
   const contentType = req.get('Content-type')
 
   if (contentType !== 'application/json') {
@@ -83,27 +83,82 @@ app.post('/api/persons', cors(corsOptions), async (req, res) => {
     const savedPerson = await person.save()
     res.json(savedPerson)
   } catch (error) {
-    console.log('error saving person to database:', error.message)
+    console.log('error saving person to database:')
+    next(error)
   }
 
 })
 
-app.delete('/api/persons/:id', cors(corsOptions), (req, res) => {
-  const id = req.params.id
-  const matchedPerson = persons.find(person => person.id === id)
-  if (!matchedPerson) {
-    res.status(404).send({ error: `person with id:${id} is not found` })
+app.delete('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
+  try {
+    const result = await Person.findByIdAndDelete(req.params.id)
+    res.json(result);
+  } catch (error) {
+    console.log('error deleting person')
+    next(error)
   }
-
-  persons = persons.filter(person => person.id !== matchedPerson.id);
-
-  res.json(matchedPerson);
 })
 
-app.get('/info', (req, res) => {
-  let message = `<p>Phonebook has info for ${persons.length} ${persons.length === 1 ? 'person' : 'people'}</p>\n`;
-  message += `<p>${Date(Date.now()).toString()}</p>`
-  res.send(message)
+app.put('/api/persons/:id', cors(corsOptions), async (req, res, next) => {
+  const contentType = req.get('Content-type')
+
+  if (contentType !== 'application/json') {
+    res.status(415).send({
+      error: 'Unsupported Media Type',
+      message: `Expected Content-Type: application/json, but received ${contentType}`
+    })
+    return
+  }
+
+  const newPerson = req.body
+  if (newPerson?.name === undefined || newPerson?.number === undefined) {
+    res.status(400).send({
+      error: 'Unexpected json format',
+      message: `json must contain entries {name: ..., number: ...}`
+    })
+    return
+  }
+
+  const person = {
+    name: newPerson.name,
+    number: newPerson.number
+  }
+
+  try {
+    const result = await Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    res.json(result);
+  } catch (error) {
+    console.log('error updating person to database')
+    next(error)
+  }
+})
+
+app.get('/info', async (req, res, next) => {
+  try {
+    const persons = await Person.find({});
+    let message = `<p>Phonebook has info for ${persons.length} ${persons.length === 1 ? 'person' : 'people'}</p>\n`;
+    message += `<p>${Date(Date.now()).toString()}</p>`
+    res.send(message)
+  } catch (error) {
+    console.log('error fetching persons from database:')
+    next(error)
+  }
+})
+
+// Unknown endpoints handler
+app.use((request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
+})
+
+// Error handler
+app.use((error, req, res, next) => {
+  console.error(error.message)
+
+  if (error.name = 'CastError') {
+    return res.status(400).send({ error: 'malformatted id' })
+  }
+
+  next(error)
 })
 
 const PORT = process.env.PORT || 3001
